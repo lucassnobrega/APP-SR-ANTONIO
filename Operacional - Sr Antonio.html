@@ -19,8 +19,8 @@
 :root{
   --bg:#f4f2ee;--panel:#ffffff;--panel2:#f0ede8;--panel3:#e8e4dd;
   --line:rgba(0,0,0,.07);--line2:rgba(0,0,0,.12);
-  --text:#1a1714;--muted:#7a7168;--muted2:#9a9088;
-  --gold:#b8943a;--gold2:#d4a84b;--gold-bg:rgba(184,148,58,.1);
+  --text:#1a1714;--fg:#1a1714;--muted:#7a7168;--muted2:#9a9088;
+  --gold:#b8943a;--gold2:#d4a84b;--gold-bg:rgba(184,148,58,.1);--acc:#b8943a;
   --green:#16a34a;--amber:#d97706;--red:#dc2626;--blue:#4f46e5;--cyan:#0891b2;
   --radius:14px;--shadow:0 8px 40px rgba(0,0,0,.12);
   --tr:.2s cubic-bezier(.4,0,.2,1);--sidebar:248px;
@@ -896,7 +896,7 @@ select.f-in,select.finput{appearance:none;cursor:pointer;background-image:url("d
           <span style="font-size:.52rem;color:var(--muted2);letter-spacing:.04em;opacity:.5;" title="Versão do app">v1</span>
         </div>
       </div>
-      <div id="p-operacional" class="panel"></div>
+      <div id="p-operacional" class="panel on"></div>
     </div>
   </div>
 </div>
@@ -938,13 +938,13 @@ select.f-in,select.finput{appearance:none;cursor:pointer;background-image:url("d
 // 1) Crie um projeto gratuito em https://console.firebase.google.com > Realtime Database
 //    e cole a config abaixo (Project Settings > Your apps > SDK setup and configuration).
 const _fbConfig={
-  apiKey:"COLE_AQUI_SEU_API_KEY",
-  authDomain:"COLE_AQUI_SEU_AUTH_DOMAIN.firebaseapp.com",
-  databaseURL:"https://COLE_AQUI_SEU_PROJETO-default-rtdb.firebaseio.com",
-  projectId:"COLE_AQUI_SEU_PROJECT_ID",
-  storageBucket:"COLE_AQUI_SEU_PROJECT_ID.firebasestorage.app",
-  messagingSenderId:"COLE_AQUI_SEU_SENDER_ID",
-  appId:"COLE_AQUI_SEU_APP_ID"
+  apiKey:"AIzaSyB4VRlNGNweIpSh6yca7BC4y2Dnd0jG4P0",
+  authDomain:"app-sr-antonio.firebaseapp.com",
+  databaseURL:"https://app-sr-antonio-default-rtdb.firebaseio.com",
+  projectId:"app-sr-antonio",
+  storageBucket:"app-sr-antonio.firebasestorage.app",
+  messagingSenderId:"1051642442517",
+  appId:"1:1051642442517:web:d9a70cb2f91c80cfe96f1c"
 };
 // 2) Crie um repositório no GitHub (pode ser público), suba este HTML e um "team-data.json",
 //    ative GitHub Pages, e cole o caminho do repositório abaixo (usuario/repositorio).
