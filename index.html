@@ -17,12 +17,13 @@
 <style>
 /* ── TEMA CLARO (padrão) ── */
 :root{
-  --bg:#f4f2ee;--panel:#ffffff;--panel2:#f0ede8;--panel3:#e8e4dd;
-  --line:rgba(0,0,0,.07);--line2:rgba(0,0,0,.12);
-  --text:#1a1714;--fg:#1a1714;--muted:#7a7168;--muted2:#9a9088;
-  --gold:#b8943a;--gold2:#d4a84b;--gold-bg:rgba(184,148,58,.1);--acc:#b8943a;
-  --green:#16a34a;--amber:#d97706;--red:#dc2626;--blue:#4f46e5;--cyan:#0891b2;
-  --radius:14px;--shadow:0 8px 40px rgba(0,0,0,.12);
+  --bg:#12274a;--panel:#1e3d6b;--panel2:#193460;--panel3:#0f2440;
+  --line:rgba(255,255,255,.09);--line2:rgba(255,255,255,.16);
+  --text:#f7f3ea;--fg:#f7f3ea;--muted:rgba(247,243,234,.64);--muted2:rgba(247,243,234,.42);
+  --gold:#f7c433;--gold2:#ffdd70;--gold-bg:rgba(247,196,51,.16);--acc:#f7c433;
+  --cream:#f2c38b;--navy:#1e3d6b;--navy-deep:#0f2440;
+  --green:#34d399;--amber:#fbbf24;--red:#f87171;--blue:#60a5fa;--cyan:#22d3ee;
+  --radius:14px;--shadow:0 8px 40px rgba(0,0,0,.4);
   --tr:.2s cubic-bezier(.4,0,.2,1);--sidebar:248px;
   --serif:'Cormorant Garamond',Georgia,'Times New Roman',serif;
 }
@@ -214,7 +215,7 @@ html,body{transition:background .35s,color .35s;}
 
 /* MAIN */
 .main{margin-left:var(--sidebar);flex:1;min-width:0;}
-.topbar{height:54px;padding:0 20px;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.88);backdrop-filter:blur(20px);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:40;transition:background .35s;}
+.topbar{height:54px;padding:0 20px;display:flex;align-items:center;justify-content:space-between;background:rgba(18,39,74,.88);backdrop-filter:blur(20px);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:40;transition:background .35s;}
 [data-theme="dark"] .topbar{background:rgba(8,12,20,.92);}
 .tb-left{display:flex;align-items:center;gap:10px;}
 .tb-title{font-size:.95rem;font-weight:700;}
@@ -815,14 +816,10 @@ select.f-in,select.finput{appearance:none;cursor:pointer;background-image:url("d
 
   <div class="login-card">
     <div class="lc-logo-wrap">
-      <svg width="48" height="48" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="30" cy="30" r="24" fill="none" stroke="url(#lg)" stroke-width="4.5"/>
-        <text x="30" y="38" text-anchor="middle" font-family="Georgia,serif" font-size="24" font-weight="700" fill="url(#lg)">A</text>
-        <defs><linearGradient id="lg" x1="6" y1="6" x2="50" y2="54" gradientUnits="userSpaceOnUse"><stop stop-color="#e8d5a3"/><stop offset="1" stop-color="#c9a96e"/></linearGradient></defs>
-      </svg>
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMYAAADgCAMAAABvsOlEAAAAYFBMVEXsx1paYmWhn5riu5HjzqXW4OxccIyel2g3TWD2vTPZuWQjNkpziaG1x9uhs8xfYjqEeW0lMjd4g3M2Rjm5wLCDf4T5yStMOjZ8m8SikT/Av9IePWvxw4slWZ31+fv3xDRu3WhyAAAAIHRSTlP///////////////////////////////////8A/////7s6M+wAAA7gSURBVHja7Z0Jd+MoEoApLmEddpKeazd2/P//5VAFSOiykYzS2X3wZvqlO47Dp7qLw+zz/2KwglEwCkbBKBgFo2AUjIJRMApGwSgYBaNgFIyCUTAKRsEoGAWjYBSMglEwCkbBSBwGWt51Sn31Q3VnruF/BQPas4pnPx2WRv9sDCL4ShmK65+JAfocEyj70NtWa33zwxj7l/bcqXwk2TGAqwjgfO4nvzCM5oGl0z8Iw2g1EGhzSxlBdEr/EAzoetNdlkHzmOQFkHwYQZm6dspgADiXbljP5b74g0P8ktaBmN+LAUEz2rEmQeXnz8bDQ/GIxYG0vxFDnx3DyJ4BqmH+92icTqf7faDhvQ0RSPe7MAJEGzNwAqBJ30cM0deeRKleJue9FvI6BvcOMzIFYpgJYGWQTP7wIOTp9PdjeIjeIt6RoWb36UMfj4lsajaAqF0G8hqGCxNdb6cNl/Esacp1VcFoVFU9vMiBnFAkfFCs9lsxzs7bRwbB7oM5WIA3gJX47WAiqSCI7jn092GQKAbDBin7adV1XUGvaJcLSeFycV+YpvfGlSM50f8WhAeOrXbOXrOKcwxhp8RIlarK+BzwcqnqQYWcYdQnVDPjSVAmJ4/CpKB/7TYHwt0YKtYnhHCqhLZAM2x+XcgGnIqdeo8Vokb9n56E3f/qOXiw8/N3YOhYFKb3r1YQgCrzfok1f4gWDsmh4IsvvxoP4l9iOehftpo5261QvSh4CHS1hUA5IMMs3E1Cuf9uTdgGWACpnTzsL1CHY3SUxU0s22qThWisD5pO2HndCg16Gj+sYTuQivXyAG8e52MxjBoUynCvT1ZDTBAEqoz9/1QPcYO8UwPwMQogdQQCQYJM4gNCrYUjMcjPtmNRMFInC9EL4uRFYO24WS+ZLAgi0yMgCyHHy73X7Q7EIOPWg1XUFCbgFs3Da5hpmqelHyCH/Ynq4hSLsi8G3sr1YRg6Mm4eRIG/1k6C+czCQsAtcTQIgi740twaMhD7N9k4cfCjMNqBgmIFKg9qhBl8pk30KnNLH8ZpIv6Qqby38OJQB2G0g4vSMv6VFQuJlB0ft23DC7KyX9UuutTGOSt9CAZat/KVmuyfoZ0G/nZyOqz60LftAzgmMpYDXGpCz6bdoFVsH4Xzswx/szXTu3P6LEoHN44Gow2zjtfFD3pfs0Gr2LZ44TWKSzJnfGjvqE8nJ4nbK8Paen1BtaI3++UyK50dgyj0IIsTeSjvZa0+M7i9NqyJVCiOU3gznh7J0zHOfbxAR3tyZtHH3nv9cXt1/KpsAAcfSFwkV7kx2j52u3DhzcLnrPcXNcqPDyBnZd+zbkircmOgeZ9HFFYWlQ94Nt5xc8szGodBWqWS86pUDPuOnXtgluIvhlrchJDHkqK2SQSth3CUHjlYumE4f6KYd/Hv6Bt90ZriUZXgcJukWUsdB49RORvnOTHQS7WOQkYUiOBTqmcQ/Hpl16sQvKJ+j/2TCyGlnP+sc32E0Sa7qjSMLqiUdBTGehUW+geQ4ErlFQe7zsacw5DLPQJDB1/rzBuTnypUds/TQFOJNQg7xJuZx8G7c1XpHpclCuM8pIOoRF4WJ1Y/QQDg0uqSGKaNX47+yqcCgWMw2mDfLpGyv/UtFJxrLoqK1A/OhbwmDA7NzDzyY1j7du0KWTvbu4TQvWLdDY9mH0lirlHhFVLEKO/1ARjaCwOceTeY0p4Gr7gw/pQ4wUfzn7NIKSBWq/qWGSNYBqmU1SJr3ifqc65RgLxuGFJ68xc8CuXMJ1VdNgxfZGhMzu27U8WMefmakwKxicImTsFEYivP7XC5jxmchGEjhg+za+YNVpnYBg5reXKOISFzFPcBHEgY4KMsW3NSDWrUJnFg20vOMMgLn5M7uSxBp76cMO4kDKCIwe4rFFyMLTdBq7BNIScYDWXMKl9qqL1pyHHgW3a128xiKo4I48b9+sAtE8bZ+Snt526rGsoV2GJ/47pnSLWAYTJXf2cX+7RPpsB31apZ2LYZqxD7OL6cs+KT9+TpbVyWEDXaYBqoU75HW433I/B9AL1akXFMMVR6o4olOCpMbnkddMp1m2EU7cQWm15Sq0VpfOVr8DQB417fmetbkJ8ye4P2o6xkTNHmbLcFpcKWTuMx7iMMkwMDU5IJxpYFp1QTxxqAvQeMcTaVB8OmuWavTj3HaF0uAoNt2ISqNrkx5gVtm3VhAHz4q+5DKjJxt+IQDJV3mQZ7XtifsvPHWoNyEsiEMS5or6Nte1anTEaMzhmHYYM4JrHvdWn4d+DN2DRyLmGijjauQD7hwpbN11/GmMR7xmaZOilVTmmgVpngq4AWhCZp4a5UylbffpBmiRr/zRyIcfZ1U+VqWJuX7MYQoe4eNXVAc58IwBgj64Jy31LwHQUjzGvSkHohOZ7luLkx+p5CFdTq9hKG1MurmPJax+JQW3ZbpGCgOEzfzbvMZsBfCQ/R24iROLrsy/s+IbnR6ndtnmNIm1uQCS92DcF1RcGbeAW+02ZzzAiRZ1/exzKMfndY23iIIbEFCKtlbX2VUz6LTEvRMBLHV/bl/WAdsFiGj2c69kK3aiXYTbvs2FkHISJxnDfscEvDAL8yQOtksya6iCXRTk13zfOKKO55foyKgxvkORP13jooQbQZ7rwnIqKZLLWt1vrPQxSvQ8sX1wmiFLfLjGFUr1Zsukuq6WcaNZNxpzqnx7tU3HoG0ScjLOIyx0mD1jhokpW8rHWeh0VliFsMYiWrEk6lRNx8F1HxdD4AA63cbXupqjkGi0NwWCR7ntWSX/YvZoGFR/Ev/2aLXq2a6SIXkMMJZmGsIMQzWdA3eOv2RoPNqdD/+uW0twhDZVwYmK5j3tpp2GB9W2O0zvRoUUZMMhLDrWTYtY5M/GboVErujUjnYB5Ljsr5e5j0DRfaiNGrm6Z5t/8Hl9HiWmctYmeHj45nxvgcdoXNLZwKRD5SoboW13k/lP7O36nVSP1Sm7RUb5SOgEQML1YAv8MtqerYurutm+8qIPM0Ie8QSUpV0TJzLDZrJoghPIb9vlTpjYVNew3x2fB5RiWoig7ZE0UK4Yo7/af9Y8Fa2GSxn5xuxd0X4CiuV8WTu+rbdn7+M2yIHpuGzQXp4TIKCHF11zTtxqrqw07eZck2hCQ2SDbuw+1magWytkkrNi/FPCVBA36HZw2R6WI/lh72QdhCClKLwI0YfBGDMZ/jiQGiwROYVrek2NhUxC3qgG/S0J8qKc99GePDRY3+yXp18sU1e7AWviIgJvCnXUJzFEY787n8Ok62KS6/ieuDRWXxZsP26veZDGIW1/YgpQpdkvkiTZRXPVnIlDZqPAr3IU+2GDq1Btx6YkDNXFUc4XgEEUeFyZoaRWqxWk9pjKT0AkAMld9TLWjV2/g5VkutkAYWvNEqBn6TXiAOihuL4pDRfP+eT05IjWnK2M3KZlzdiomsOEmDJxcdmzHa+Pho3196tHdKjJ+8yw3NGINNRKU5Gh0kt0e2n20aNtwnLmFW8/UoIR416cjbWhOT6Sv82zEwPei2LAxUI1DJW4zRk58ScZDkztv6GM6PwaCzi91qu43N8o2KpowpUp/Rt6g2cQyEeOcPd20hvuHY3A4MNRw1i7TqgUgAdyFz7KaNupsQhQ4dPwyHga9MXlPece5vSvFUq7iLAzjxcR2vZdSdHjSPhzZo+hnGXSaOeRuWbmFSz1rqev1Mk6QMqxq1F8k2sM+jMm/unmwTM+RlqUdGIPpxsffoUAS11cGXX4NtaJQPTz82vucUpqJH57M/8PmHWE+h0g48hIy4RuG1LW7rz7iDZwHjPHr+QMaxvpVKpp3bgNkyjjrmpNkUA0tVvFsHxY8F4HJNJ9NObmGgCD/hmlRqy00EuzGsAFxXhvO17v8GlTLxZvxwkY067mgvBnFFm4/EFQ+UuErNiLXyLomiiXYp1mThdH/Jhtst9ngqTKnEuMQZN9rsP2OJjsnq3DDMAoWI19TAXTXSbbnbYlfcaEOw6leAYWYPqOtydjTj1lQzY/EHhmLT2LR7Z3cU74aQBzdNdyGIUcMfMGcSHBZbpfHVSU0DYrKNmm/aufpKToUFh0+kuGvGxIFcPPJONvbbb176/SJyugCFP/vfrcLYg+HrWLfPQyAPtj5lvy9HPDVsqFdDPpXpavMlPHsu6PCna1z2oBtX+rf9E0Wtqh4eDhcPYj5sW7t8AaN1aZUrsEXln76IQ6B8W5w+r2jj8YOjNvuEsfu6FOXzU5xOTeKAR4v84eyfuIqHpYkXhvr8DoywYEM9s9pH3oaPH7EECAtJ3h89G7WL+TuEsRNDhzq2jZJrmKq8Ozpa0apS4uaeHdfvvIBB5tHFlWi7YZf3Q/uGPcLYfT8VXdXhli1b6//DgfjF3nLyRivutlHtuNpw9zVb7fQqQ71ezSaqFN+wZpkLw13GMzQQz1967ybQSBaw877MF66gA3fbKG810EWTqGON2E9h3FawXbdlvnQhYDu+Rlm5VeX0Q3/xRizhbx1Qn9+O8WmGq4jpSrpwTmujTBhza23dvpsyPzPc+Yn3JOMN3AAqiu1Pzmrw6Vkobl6iyHk7sfbyuD3e/iJpeyTMC/Zu/3W4WS9Z7jn0ijxY3ypp3uLNrrD/ztIDMBxH6L+tWjp/G23AcDmk/nqFIvPN3cOVaDx1Ud81JfiLV3dnvkedOHi4nzh1wzqon3QBeR8TfbKVAOLq+K+vrXd8Ho3hrqD025Weg6CjddnZ5w/DoKTRqogrmfRDEtpNtvu67mMxvEBC1mi0u0p9vPbdaxS2nF+mOOiDK7TPGuPrU1xPKt4IrkP73/xQjD5r7KJb7p2l+J1X/mJoo/YnIN+BMaS/ari2npZDaC902HWlXrfugzGsanXRx7f0W7+1huhowyuh+5swxiSzPaOU5Gewi2/AsOPWf3wLfZRC0+B/wN0n15wz/ZLv+tymIBblRpZPcvkNGGP98h+Zku/Nv/NTtAwPYrD1Ypv1rb/9w8C0HfDZZH7X8plmBaNgFIyCUTAKRsEoGAWjYBSMglEwCkbBKBgFo2AUjIJRMApGwSgYBaNgFIyCUTAKRsEoGAWjYBSMguHGv6zVZFp7AQt5AAAAAElFTkSuQmCC" alt="Sr. Antônio" style="width:60px;height:60px;object-fit:contain;">
     </div>
 
-    <div class="lc-brand">Sr. Antonio</div>
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMoAAAA4BAMAAABOEXqJAAAAMFBMVEWesc9ccJLS4vJyi6myyOE5UHSQoLVKXncSK1B9m8Q/YIoePWvv+/4pWZjV5vdPaIzWuF7kAAAAEHRSTlP//////////////wD/////B0V1GAAAAqdJREFUeNrt121IE3EcB/Dv5ilrTbuFz0pMIV+Y4KzQQKkjLUnEFNdQizx7WPTwQsGHoIJBEIESZiQylywDEZKcOETS5MgkKJgzo5IK98JeFLktuJ3u9tQLs6gIR3dEL+5e3e/4w+f+39+f33GyCfyDSw5JkRRJkRRJkRRJkRRJkRRJkRRJ+f+UYEFT84+qtPNvFNmG/5XFdsiX14vpCj/77ZZiRNwLZ59z09+LinMEAKAF3pdiJhZbv43rWi/a08xGAOD7HOawBgB4oygKS+L5+eK1dPguzqQFgF7Ybu+tBICgR5zuD+GE1vVo7SCE/RcpArh5OXQj94OWBxDdifvgBXd/NSVlPkqN2m4AVWqbh6+imvP8HYryqM95eMtWDWd46kfqN8iN2Og1FIM11VYLEwMEfWPDd2t5hpM73QmLhRMzai4cGF/ZKR/N8jHCEgvQpVnjaKU8QHea8mgd5ZXvDspklbRB2bEaT/hkBNMWnmIEJlbgc2D7PJkx29PYUvTas+BuOJ3W5B75yHFKNAznNiyeTQb2WQV2X0uCL9mU+f4Q0O7ouU4x5DE6u1OT78+ug5bS0Y4eHQqNAs8Y38fwZ/pX7NEvZoABJ1pX9AzpRcJjv3OONZKjSDIeZG1agUpMjjrJekARirkyBSwBytRYQN81dDg74d0WaKyUqd/QLnyO9bosV3XAYI2FhopF2+yFRla1PsO4MluZqfyhGNPy5wQn+zW7TCWBJwgAJ+1xhkSRZvLalZ6aWW3WMKr8dCbP6czZYwCPyQfsMqL4KTEUc6rX/MkJvWrrNHuK/n13l9gko2DFlwzI9YuuZ39ccWSHcCV07dWA4C9yZH0hAr8+KGISyywRK0REq75s9sqOLylIPu7OPYuKZN8sxA/td4We3hqMTPkKQ1D2bId6QDIAAAAASUVORK5CYII=" alt="Sr. Antônio" style="width:150px;max-width:65%;margin:8px auto 4px;display:block;">
     <div class="lc-sub">Painel Operacional</div>
     <div class="lc-divider"></div>
 
@@ -862,10 +859,7 @@ select.f-in,select.finput{appearance:none;cursor:pointer;background-image:url("d
     <nav class="sidebar" id="sidebar">
       <div class="sb-top">
         <div class="sb-logo">
-          <svg width="34" height="34" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
-            <circle cx="30" cy="30" r="24" fill="none" stroke="white" stroke-width="4.5"/>
-            <text x="30" y="38" text-anchor="middle" font-family="Georgia,serif" font-size="24" font-weight="700" fill="white">A</text>
-          </svg>
+          <img src="data:image/png;base64,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" alt="Sr. Antônio" style="width:34px;height:34px;object-fit:contain;border-radius:8px;flex-shrink:0;">
           <div class="sb-logo-block">
             <div class="sb-logo-name">Sr. Antonio</div>
             <div class="sb-logo-sub">Painel Operacional</div>
@@ -948,7 +942,7 @@ const _fbConfig={
 };
 // 2) Crie um repositório no GitHub (pode ser público), suba este HTML e um "team-data.json",
 //    ative GitHub Pages, e cole o caminho do repositório abaixo (usuario/repositorio).
-const GH_REPO_PATH="SEU_USUARIO/SrAntonio-Operacional";
+const GH_REPO_PATH="lucassnobrega/APP-SR-ANTONIO";
 const GH_RAW=`https://raw.githubusercontent.com/${GH_REPO_PATH}/main/team-data.json`;
 const GH_API=`https://api.github.com/repos/${GH_REPO_PATH}/contents/team-data.json`;
 const SK='srantonio_op_v1';
@@ -1050,62 +1044,45 @@ function seedChecklistModelos(){
     items,criadoEm:new Date().toISOString(),criadoPor:'seed'
   });
   return [
-    M_('Abertura da Cozinha (Chef)','Cozinha','abertura','11:00',[
+    M_('Abertura da Cozinha','Cozinha','abertura','11:00',[
+      _mkItem(uid(),'Mãos lavadas antes de iniciar','ok_nok',false,false),
+      _mkItem(uid(),'Uniforme completo e higiene verificados','ok_nok',false,false),
       _mkItem(uid(),'Temperatura das geladeiras verificada e registrada (≤4°C)','valor',true,false),
       _mkItem(uid(),'Temperatura dos freezers verificada e registrada (≤-18°C)','valor',true,false),
       _mkItem(uid(),'Tabela de descongelamento consultada e atualizada','ok_nok',false,false),
       _mkItem(uid(),'Itens descongelados da véspera conferidos','ok_nok',false,false),
       _mkItem(uid(),'Itens para descongelar hoje identificados e retirados','ok_nok',false,false),
       _mkItem(uid(),'Briefing realizado com a equipe','ok_nok',false,false),
-      _mkItem(uid(),'Uniformes e higiene da equipe verificados','ok_nok',false,false),
+      _mkItem(uid(),'Utensílios limpos e no lugar correto','ok_nok',false,false),
+      _mkItem(uid(),'Equipamentos da cozinha testados e funcionando','ok_nok',false,false),
       _mkItem(uid(),'Mise en place aprovado (gramagens conferidas)','ok_nok',false,false),
       _mkItem(uid(),'Produção em lote conferida (bolinhos, dadinhos, iscas)','ok_nok',false,false),
       _mkItem(uid(),'Geladeira de serviço organizada e etiquetada','ok_nok',false,false),
-      _mkItem(uid(),'Estação de cada cozinheiro limpa e equipada','ok_nok',false,false),
+      _mkItem(uid(),'Estações de trabalho limpas e equipadas','ok_nok',false,false),
+      _mkItem(uid(),'Itens indisponíveis identificados e comunicados','ok_nok',false,false),
       _mkItem(uid(),'Cozinha LIBERADA para o serviço','ok_nok',false,false),
     ]),
-    M_('Fechamento da Cozinha (Chef)','Cozinha','fechamento','23:30',[
+    M_('Fechamento da Cozinha','Cozinha','fechamento','23:30',[
       _mkItem(uid(),'Consumo do dia registrado na planilha','ok_nok',false,false),
       _mkItem(uid(),'Tabela de descongelamento atualizada para amanhã','ok_nok',false,false),
       _mkItem(uid(),'Sobras embaladas, etiquetadas e armazenadas corretamente','ok_nok',true,false),
       _mkItem(uid(),'Itens vencidos descartados','ok_nok',false,false),
-      _mkItem(uid(),'Limpeza da cozinha aprovada','ok_nok',false,false),
-      _mkItem(uid(),'Temperatura final das geladeiras conferida','valor',false,false),
-      _mkItem(uid(),'Checklist assinado (hora de saída)','ok_nok',false,false),
-    ]),
-    M_('Abertura da Estação (Cozinheiro)','Cozinha','abertura','11:00',[
-      _mkItem(uid(),'Mãos lavadas antes de iniciar','ok_nok',false,false),
-      _mkItem(uid(),'Uniforme completo e limpo','ok_nok',false,false),
-      _mkItem(uid(),'Briefing com o Chef realizado','ok_nok',false,false),
-      _mkItem(uid(),'Estação de trabalho limpa e organizada','ok_nok',false,false),
-      _mkItem(uid(),'Utensílios limpos e no lugar correto','ok_nok',false,false),
-      _mkItem(uid(),'Geladeira de serviço verificada (≤4°C)','valor',false,false),
-      _mkItem(uid(),'Mise en place da estação conferido','ok_nok',false,false),
-      _mkItem(uid(),'Equipamentos da estação testados e funcionando','ok_nok',false,false),
-      _mkItem(uid(),'Itens indisponíveis comunicados ao Chef','ok_nok',false,false),
-    ]),
-    M_('Fechamento da Estação (Cozinheiro)','Cozinha','fechamento','23:30',[
-      _mkItem(uid(),'Sobras embaladas e etiquetadas (nome+data+validade)','ok_nok',true,false),
-      _mkItem(uid(),'Geladeira de serviço organizada','ok_nok',false,false),
-      _mkItem(uid(),'Estação de trabalho limpa e higienizada','ok_nok',false,false),
+      _mkItem(uid(),'Estações de trabalho limpas e higienizadas','ok_nok',false,false),
       _mkItem(uid(),'Equipamentos desligados (exceto geladeiras)','ok_nok',false,false),
-      _mkItem(uid(),'Utensílios lavados e guardados','ok_nok',false,false),
-      _mkItem(uid(),'Pendências passadas para o próximo turno','ok_nok',true,false),
-      _mkItem(uid(),'Hora de saída registrada','ok_nok',false,false),
-    ]),
-    M_('Fechamento Geral da Cozinha (Auxiliar)','Cozinha','fechamento','23:30',[
+      _mkItem(uid(),'Utensílios lavados e guardados no local correto','ok_nok',false,false),
+      _mkItem(uid(),'Panelas e formas limpas e guardadas','ok_nok',false,false),
       _mkItem(uid(),'Churrasqueira limpa','ok_nok',false,false),
       _mkItem(uid(),'Fritadeiras limpas','ok_nok',false,false),
       _mkItem(uid(),'Bancadas e superfícies higienizadas','ok_nok',false,false),
-      _mkItem(uid(),'Utensílios lavados e guardados no local correto','ok_nok',false,false),
-      _mkItem(uid(),'Panelas e formas limpas e guardadas','ok_nok',false,false),
       _mkItem(uid(),'Geladeira de serviço organizada e limpa por fora','ok_nok',false,false),
       _mkItem(uid(),'Chão da cozinha varrido e passado pano','ok_nok',false,false),
       _mkItem(uid(),'Ralos limpos','ok_nok',false,false),
       _mkItem(uid(),'Lixo retirado e saco trocado','ok_nok',false,false),
       _mkItem(uid(),'Materiais de limpeza organizados no local correto','ok_nok',false,false),
-      _mkItem(uid(),'Limpeza aprovada pelo Chef','ok_nok',false,false),
-      _mkItem(uid(),'Hora de saída registrada','ok_nok',false,false),
+      _mkItem(uid(),'Temperatura final das geladeiras conferida','valor',false,false),
+      _mkItem(uid(),'Limpeza da cozinha aprovada','ok_nok',false,false),
+      _mkItem(uid(),'Pendências passadas para o próximo turno','ok_nok',true,false),
+      _mkItem(uid(),'Checklist assinado (hora de saída)','ok_nok',false,false),
     ]),
     M_('Abertura do Salão','Salão','abertura','11:00',[
       _mkItem(uid(),'Uniforme completo e limpo','ok_nok',false,false),
@@ -1234,6 +1211,13 @@ function migrateState(d){
   d.op.manutencao=Array.isArray(d.op.manutencao)?d.op.manutencao:[];
   if(!d.op.checklistModelos||typeof d.op.checklistModelos!=='object')d.op.checklistModelos={};
   if(!d.op.checklistModelos[OPLOJA]||!d.op.checklistModelos[OPLOJA].length)d.op.checklistModelos[OPLOJA]=seedChecklistModelos();
+  if((d.v||1)<3){
+    // Força a recarga dos checklists oficiais do Sr. Antonio (baseados nos POPs),
+    // substituindo qualquer versão de teste que tenha ficado salva no navegador ou no Firebase.
+    // v3: Cozinha consolidada em 2 checklists (Abertura/Fechamento) — só o Chef responde.
+    d.op.checklistModelos[OPLOJA]=seedChecklistModelos();
+    d.v=3;
+  }
   if(!d.op.faq||typeof d.op.faq!=='object')d.op.faq={};
   if(!d.op.completions||typeof d.op.completions!=='object')d.op.completions={};
   // Limpeza leve: erros/manutenção resolvidos com mais de 90 dias
