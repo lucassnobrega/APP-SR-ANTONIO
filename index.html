@@ -1375,9 +1375,11 @@ function buildOpSidebarHtml(){
     erros:(S.op?.errosProcesso||[]).filter(e=>e.status==='pendente').length||0,
     manutencao:(S.op?.manutencao||[]).filter(m=>m.status!=='concluido').length||0,
     checklists:clBadge,
+    executar:clBadge,
   };
   const tabs=[
     {id:'hoje',label:'Hoje',grp:'Visão'},
+    {id:'executar',label:'Executar Checklists',grp:'Visão'},
     {id:'tarefas',label:'Tarefas',grp:'Visão'},
     {id:'erros',label:'Ocorrências',grp:'Visão'},
     {id:'manutencao',label:'Manutenção',grp:'Visão'},
@@ -1410,9 +1412,10 @@ function renderOpStore(el){
   buildSidebar();
   const loja=opGetLoja();
   const tab=window._opTab||'hoje';
-  const TAB_LABELS={hoje:'Hoje',tarefas:'Tarefas',erros:'Ocorrências',manutencao:'Manutenção',checklists:'Checklists',faq:'FAQ / POPs',funcionarios:'Funcionários',marketing:'Marketing'};
+  const TAB_LABELS={hoje:'Hoje',executar:'Executar Checklists',tarefas:'Tarefas',erros:'Ocorrências',manutencao:'Manutenção',checklists:'Checklists',faq:'FAQ / POPs',funcionarios:'Funcionários',marketing:'Marketing'};
   let content='';
   if(tab==='hoje')content=opTabHoje();
+  else if(tab==='executar')content=opTabExecutar();
   else if(tab==='tarefas')content=opTabTarefas();
   else if(tab==='checklists')content=opTabChecklists();
   else if(tab==='faq')content=opTabFAQ();
@@ -1625,6 +1628,58 @@ function opTabHoje(){
       </div>`).join('')}
     </div>`;
   }
+  if(!temAlgo)return`<div class="empty-state">Nenhum checklist ativo. Configure os modelos na aba Checklists e ative-os.</div>`;
+  return html;
+}
+// ── TAB: EXECUTAR CHECKLISTS (qualquer setor) ──────────────────
+function opTabExecutar(){
+  const hoje=serviceKey();
+  const setores=opSetores();
+  const modelos=(S.op.checklistModelos?.[OPLOJA]||[]).filter(m=>m.ativo!==false);
+  const completions=S.op.completions?.[OPLOJA]?.[hoje]||{};
+  const agora=new Date();
+  const TIPO_COR={abertura:'#22d3ee',fechamento:'#f59e0b',geral:'#a78bfa'};
+  let temAlgo=false;
+  let html=`<div style="font-size:.8rem;color:var(--muted);margin-bottom:18px;">Toque em qualquer checklist para preencher, de qualquer setor.</div>`;
+  setores.forEach(setor=>{
+    const sm=modelos.filter(m=>m.setor===setor);
+    if(!sm.length)return;
+    temAlgo=true;
+    const concluidos=sm.filter(m=>completions[m.id]?.status==='feito').length;
+    const cards=sm.map(m=>{
+      const comp=completions[m.id];
+      const feito=comp?.status==='feito';
+      const horParts=m.horarioLimite?m.horarioLimite.split(':'):null;
+      const passou=horParts&&(agora.getHours()>parseInt(horParts[0])||(agora.getHours()===parseInt(horParts[0])&&agora.getMinutes()>=parseInt(horParts[1])));
+      const atrasado=!feito&&passou&&m.horarioLimite;
+      const turnoLabel=m.turno||{abertura:'Manhã',fechamento:'Tarde',geral:'Geral'}[m.tipo]||'Geral';
+      const cor=feito?'#22c55e':atrasado?'#ef4444':TIPO_COR[m.tipo]||'#a78bfa';
+      const statusBadge=feito
+        ?`<span style="font-size:.65rem;padding:2px 8px;border-radius:999px;background:#22c55e22;color:#22c55e;font-weight:700;">Feito${comp?.finalizadoEm?' às '+comp.finalizadoEm.slice(11,16):''}</span>`
+        :atrasado
+          ?`<span style="font-size:.65rem;padding:2px 8px;border-radius:999px;background:#ef444422;color:#ef4444;font-weight:700;">Atrasado</span>`
+          :`<span style="font-size:.65rem;padding:2px 8px;border-radius:999px;background:${cor}22;color:${cor};font-weight:700;">${turnoLabel}</span>`;
+      return`<div class="card" style="padding:14px 16px;margin-bottom:8px;border-left:4px solid ${cor};cursor:pointer;" onclick="${feito?`opVerCompletionDetalhes('${m.id}')`:`opOpenExecutarChecklist('${m.id}')`}">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+              ${statusBadge}
+              <span style="font-size:.9rem;font-weight:700;">${esc(m.nome)}</span>
+            </div>
+            <div style="font-size:.7rem;color:var(--muted);">${m.horarioLimite?`Limite: ${m.horarioLimite} · `:''}${(m.items||[]).length} itens</div>
+          </div>
+          ${feito?`<button class="btn-ghost btn-sm" onclick="event.stopPropagation();opVerCompletionDetalhes('${m.id}')">Ver</button>`:`<button class="btn-gold btn-sm" onclick="event.stopPropagation();opOpenExecutarChecklist('${m.id}')">Executar →</button>`}
+        </div>
+      </div>`;
+    }).join('');
+    html+=`<div style="margin-bottom:20px;">
+      <div style="font-weight:700;font-size:.86rem;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+        <div style="width:4px;height:16px;border-radius:2px;background:var(--acc);flex-shrink:0;"></div>${esc(setor)}
+        <span style="font-size:.68rem;font-weight:400;color:var(--muted);">${concluidos}/${sm.length}</span>
+      </div>
+      ${cards}
+    </div>`;
+  });
   if(!temAlgo)return`<div class="empty-state">Nenhum checklist ativo. Configure os modelos na aba Checklists e ative-os.</div>`;
   return html;
 }
