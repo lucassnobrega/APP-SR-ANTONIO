@@ -2998,18 +2998,30 @@ async function _bootLocalOnly(){
         const newer=(!S||!S.lastUp||fb.lastUp>S.lastUp)&&!_savePending;
         if(newer){
           const hj=serviceKey();
-          const localPend={};
+          // Preserva conclusões locais de hoje que ainda não chegaram nesse snapshot do Firebase
+          // (evita que um checklist recém-finalizado em um aparelho "suma" quando outro aparelho
+          // salva antes de receber essa atualização — race condition de last-write-wins).
+          const localKeep={};
           if(S?.op?.completions?.[OPLOJA]?.[hj]){
             for(const[mid,cp]of Object.entries(S.op.completions[OPLOJA][hj])){
-              if(cp&&cp.status==='pendente')localPend[mid]=cp;
+              if(!cp)continue;
+              const fbCp=fb?.op?.completions?.[OPLOJA]?.[hj]?.[mid];
+              const localIsNewer=!fbCp
+                ||(cp.status==='feito'&&fbCp.status!=='feito')
+                ||(cp.status==='feito'&&fbCp.status==='feito'&&(cp.finalizadoEm||'')>(fbCp.finalizadoEm||''))
+                ||(cp.status==='pendente'&&!fbCp);
+              if(localIsNewer)localKeep[mid]=cp;
             }
           }
           S=migrateState(fb);
-          if(Object.keys(localPend).length){
+          if(Object.keys(localKeep).length){
             if(!S.op.completions)S.op.completions={};
             if(!S.op.completions[OPLOJA])S.op.completions[OPLOJA]={};
             if(!S.op.completions[OPLOJA][hj])S.op.completions[OPLOJA][hj]={};
-            Object.assign(S.op.completions[OPLOJA][hj],localPend);
+            Object.assign(S.op.completions[OPLOJA][hj],localKeep);
+            // Sobe a versão corrigida pro Firebase, senão a "cura" fica só neste aparelho.
+            S.lastUp=new Date().toISOString();
+            _fbSave();
           }
         }
         _fbReady=true;
