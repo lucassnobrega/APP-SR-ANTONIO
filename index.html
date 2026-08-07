@@ -844,6 +844,7 @@ select.f-in,select.finput{appearance:none;cursor:pointer;background-image:url("d
       <div class="lc-credit-div"></div>
       <div class="lc-credit-txt">Consultoria<br>Empresarial</div>
     </div>
+    <div style="text-align:center;font-size:.56rem;color:var(--muted);opacity:.5;margin-top:6px;">versão 2026-08-07-3</div>
   </div>
 
   <button class="theme-toggle" onclick="toggleTheme()" title="Alternar tema" style="position:absolute;bottom:24px;right:24px;z-index:10;" aria-label="Alternar tema">
@@ -948,6 +949,10 @@ const GH_RAW=`https://raw.githubusercontent.com/${GH_REPO_PATH}/main/team-data.j
 const GH_API=`https://api.github.com/repos/${GH_REPO_PATH}/contents/team-data.json`;
 const SK='srantonio_op_v1';
 const _FBKEY='srantonio_op_v1';
+// Checklists preenchidos (completions) ficam num nó SEPARADO do Firebase, gravado item a item.
+// Isso evita que o "salvamento geral" (que reescreve o estado inteiro) apague um checklist
+// recém-concluído em outro aparelho — a causa raiz do problema de checklists sumindo.
+const _FBCOMP='srantonio_op_completions_v1';
 
 function _isPlaceholderConfig(){
   return !_fbConfig.apiKey||_fbConfig.apiKey.indexOf('COLE_AQUI')===0||_fbConfig.databaseURL.indexOf('COLE_AQUI')>-1;
@@ -956,6 +961,7 @@ function _isPlaceholderConfig(){
 let S=null,me=null,toastT=null;
 let _fbReady=false,_db=null,_fbUsable=false;
 let _savePending=false,_saveQueue=null;
+let _compCache=null,_compSnapReceived=false,_compMigrated=false,_legacyCompletions=null,_legacyChecked=false;
 
 // Tenta inicializar o Firebase — se a config ainda é placeholder ou falha, o app
 // continua funcionando 100% via localStorage (nenhum erro deve travar o carregamento).
@@ -1246,7 +1252,14 @@ function _fbSave(attempt=0){
   if(!_fbUsable||!_db){saveLocalCache();setSdot('local');return;}
   _savePending=true;
   setSdot('saving');
-  _db.ref(_FBKEY).set(S).then(()=>{
+  // Os checklists preenchidos (completions) NÃO vão dentro deste "estado geral" — eles têm
+  // seu próprio nó no Firebase (_FBCOMP) e são salvos item a item por _fbSaveCompletion().
+  // Assim, salvar o estado geral (tarefas, manutenção, etc.) nunca sobrescreve/apaga um
+  // checklist que outro aparelho acabou de finalizar.
+  const _opSemCompletions={...(S.op||{})};
+  delete _opSemCompletions.completions;
+  const toSave={...S,op:_opSemCompletions};
+  _db.ref(_FBKEY).set(toSave).then(()=>{
     _savePending=false;
     saveLocalCache();
     setSdot('ok');
@@ -1270,6 +1283,37 @@ function saveLocal(){
   if(!_fbReady){saveLocalCache();return;}
   if(_savePending){_saveQueue=true;}
   else{_fbSave();}
+}
+// ── Sincronização dedicada dos checklists preenchidos (completions) ──
+// Grava/lê SÓ o checklist específico que mudou, num nó separado do Firebase — nunca
+// mexe no resto do estado. Isso é o que garante que um checklist finalizado não
+// "suma" por causa de outro salvamento acontecendo em outro aparelho ao mesmo tempo.
+function _fbSaveCompletion(modeloId){
+  saveLocalCache();
+  if(!_fbUsable||!_db)return;
+  const hoje=serviceKey();
+  const comp=S.op?.completions?.[OPLOJA]?.[hoje]?.[modeloId];
+  if(!comp)return;
+  _db.ref(`${_FBCOMP}/${OPLOJA}/${hoje}/${modeloId}`).set(comp).catch(e=>{
+    console.warn('Erro ao sincronizar checklist:',e);
+    toast('⚠️ Erro ao sincronizar checklist. Foi salvo localmente neste aparelho.',6000);
+  });
+}
+function _applyCompCache(){
+  if(!_compCache||!S)return;
+  if(!S.op)S.op={};
+  S.op.completions=S.op.completions||{};
+  S.op.completions[OPLOJA]=_compCache;
+}
+function _tryMigrateCompletions(){
+  if(_compMigrated||!_compSnapReceived||!_legacyChecked)return;
+  if(_compCache&&Object.keys(_compCache).length){_compMigrated=true;return;}
+  if(_legacyCompletions&&Object.keys(_legacyCompletions).length){
+    _compMigrated=true;
+    _db.ref(`${_FBCOMP}/${OPLOJA}`).set(_legacyCompletions).catch(e=>console.warn('Erro ao migrar completions antigas:',e));
+  }else{
+    _compMigrated=true;
+  }
 }
 function reRenderAll(){
   if(!me||!S)return;
@@ -2587,6 +2631,7 @@ function opOpenExecutarChecklist(modeloId){
   if(!S.op.completions[OPLOJA][hoje])S.op.completions[OPLOJA][hoje]={};
   if(!S.op.completions[OPLOJA][hoje][modeloId])S.op.completions[OPLOJA][hoje][modeloId]={items:{},status:'pendente'};
   saveLocal();
+  _fbSaveCompletion(modeloId);
   opRenderExec();
   document.getElementById('exec-ov').classList.add('show');
 }
@@ -2696,6 +2741,7 @@ function opXSetItem(itemId,tipo){
   comp.items[itemId].ok=(tipo==='ok');
   comp.items[itemId].nok=(tipo==='nok');
   saveLocal();
+  _fbSaveCompletion(modeloId);
   const card=document.getElementById(`xcard-${itemId}`);
   if(card){
     card.className=`exec-card ${tipo}`;
@@ -2714,6 +2760,7 @@ function opXSetVal(itemId,val){
   if(!comp.items[itemId])comp.items[itemId]={};
   comp.items[itemId].valor=val;
   saveLocal();
+  _fbSaveCompletion(modeloId);
   opXUpdateProg();
 }
 let _obsTimer=null;
@@ -2725,7 +2772,7 @@ function opXSetObs(itemId,obs){
   if(!comp.items[itemId])comp.items[itemId]={};
   comp.items[itemId].obs=obs;
   clearTimeout(_obsTimer);
-  _obsTimer=setTimeout(()=>saveLocal(),1200);
+  _obsTimer=setTimeout(()=>{saveLocal();_fbSaveCompletion(modeloId);},1200);
 }
 function opXAttachFoto(itemId,input){
   if(!input.files||!input.files[0])return;
@@ -2744,6 +2791,7 @@ function opXAttachFoto(itemId,input){
       const fi=comp.items[itemId].fotos.length;
       comp.items[itemId].fotos.push(compressed);
       saveLocal();
+      _fbSaveCompletion(modeloId);
       const gridEl=document.getElementById(`xfoto-grid-${itemId}`);
       if(gridEl){
         gridEl.style.marginBottom='10px';
@@ -2805,6 +2853,7 @@ function opXDelFoto(itemId,fi){
   if(!comp?.items?.[itemId]?.fotos)return;
   comp.items[itemId].fotos.splice(fi,1);
   saveLocal();
+  _fbSaveCompletion(modeloId);
   const gridEl=document.getElementById(`xfoto-grid-${itemId}`);
   if(gridEl){
     gridEl.style.marginBottom=comp.items[itemId].fotos.length?'10px':'0px';
@@ -2884,6 +2933,7 @@ function opFinalizarChecklist(modeloId){
   }
   comp.status='feito';comp.finalizadoEm=localISOString();comp.finalizadoPor=me;
   saveLocal();
+  _fbSaveCompletion(modeloId);
   document.getElementById('exec-ov').classList.remove('show');
   renderOperacional();toast('Checklist finalizado!');
 }
@@ -2995,35 +3045,14 @@ async function _bootLocalOnly(){
     _db.ref(_FBKEY).on('value',async snap=>{
       const fb=snap.val();
       if(fb&&fb.v){
+        // Guarda uma cópia das completions no formato antigo (dentro do blob geral),
+        // usada só uma vez pra migrar histórico pro nó dedicado (_FBCOMP) — ver _tryMigrateCompletions.
+        _legacyCompletions=fb?.op?.completions?.[OPLOJA]||_legacyCompletions;
+        _legacyChecked=true;
         const newer=(!S||!S.lastUp||fb.lastUp>S.lastUp)&&!_savePending;
-        if(newer){
-          const hj=serviceKey();
-          // Preserva conclusões locais de hoje que ainda não chegaram nesse snapshot do Firebase
-          // (evita que um checklist recém-finalizado em um aparelho "suma" quando outro aparelho
-          // salva antes de receber essa atualização — race condition de last-write-wins).
-          const localKeep={};
-          if(S?.op?.completions?.[OPLOJA]?.[hj]){
-            for(const[mid,cp]of Object.entries(S.op.completions[OPLOJA][hj])){
-              if(!cp)continue;
-              const fbCp=fb?.op?.completions?.[OPLOJA]?.[hj]?.[mid];
-              const localIsNewer=!fbCp
-                ||(cp.status==='feito'&&fbCp.status!=='feito')
-                ||(cp.status==='feito'&&fbCp.status==='feito'&&(cp.finalizadoEm||'')>(fbCp.finalizadoEm||''))
-                ||(cp.status==='pendente'&&!fbCp);
-              if(localIsNewer)localKeep[mid]=cp;
-            }
-          }
-          S=migrateState(fb);
-          if(Object.keys(localKeep).length){
-            if(!S.op.completions)S.op.completions={};
-            if(!S.op.completions[OPLOJA])S.op.completions[OPLOJA]={};
-            if(!S.op.completions[OPLOJA][hj])S.op.completions[OPLOJA][hj]={};
-            Object.assign(S.op.completions[OPLOJA][hj],localKeep);
-            // Sobe a versão corrigida pro Firebase, senão a "cura" fica só neste aparelho.
-            S.lastUp=new Date().toISOString();
-            _fbSave();
-          }
-        }
+        if(newer)S=migrateState(fb);
+        _applyCompCache();
+        _tryMigrateCompletions();
         _fbReady=true;
         setSdot('ok');
         saveLocalCache();
@@ -3032,6 +3061,7 @@ async function _bootLocalOnly(){
         // Firebase vazio — tenta baseline do GitHub, senão cria estado padrão e sobe
         let base=await loadGH();
         S=migrateState(base||defState());
+        _applyCompCache();
         _fbReady=true;
         setSdot('ok');
         _fbSave();
@@ -3042,6 +3072,17 @@ async function _bootLocalOnly(){
       setSdot('off');
       _fbReady=false;
       _bootLocalOnly();
+    });
+    // Nó dedicado dos checklists preenchidos — sincroniza item a item, isolado do resto do estado.
+    _db.ref(`${_FBCOMP}/${OPLOJA}`).on('value',snap=>{
+      _compCache=snap.val()||{};
+      _compSnapReceived=true;
+      _applyCompCache();
+      _tryMigrateCompletions();
+      saveLocalCache();
+      if(me)reRenderAll();
+    },err=>{
+      console.warn('Firebase (completions) offline:',err);
     });
   }catch(e){
     console.warn('Firebase: erro inesperado ao conectar — modo local.',e);
