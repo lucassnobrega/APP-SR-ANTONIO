@@ -868,6 +868,7 @@ select.f-in,select.finput{appearance:none;cursor:pointer;background-image:url("d
           </div>
         </div>
         <div class="sb-member"><div class="sb-av" id="sb-av"></div><div class="sb-info"><div class="sb-nm" id="sb-nm"></div><div class="sb-rl" id="sb-rl"></div></div></div>
+        <div id="sb-mode-switch"></div>
       </div>
       <div class="sb-nav" id="sb-nav"></div>
       <div class="sb-bot">
@@ -893,6 +894,7 @@ select.f-in,select.finput{appearance:none;cursor:pointer;background-image:url("d
         </div>
       </div>
       <div id="p-operacional" class="panel on"></div>
+      <div id="p-adm" class="panel"></div>
     </div>
   </div>
 </div>
@@ -1016,6 +1018,25 @@ function todayKey(){const d=new Date();const p=n=>String(n).padStart(2,'0');retu
 // serviceKey: madrugada (00h-05h) ainda pertence ao dia anterior (fechamento após meia-noite)
 function serviceKey(){const d=new Date();if(d.getHours()<5)d.setDate(d.getDate()-1);const p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;}
 function localISOString(){const d=new Date();const p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;}
+// ── Semana (Segunda a Domingo) — usado na Planilha de Produção (ADM) ──
+function admDateKey(d){const p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;}
+function admWeekStart(d){const dt=new Date(d);dt.setHours(0,0,0,0);const day=dt.getDay();const diff=(day===0?-6:1-day);dt.setDate(dt.getDate()+diff);return dt;}
+function admWeekKey(d){return admDateKey(admWeekStart(d));}
+function admWeekDays(weekKey){
+  const[y,m,dd]=weekKey.split('-').map(Number);
+  const start=new Date(y,m-1,dd);
+  const days=[];
+  for(let i=0;i<7;i++){const d=new Date(start);d.setDate(d.getDate()+i);days.push(admDateKey(d));}
+  return days;
+}
+function admFmtWeekLabel(weekKey){
+  const days=admWeekDays(weekKey);
+  const[,m1,d1]=days[0].split('-');
+  const[,m2,d2]=days[6].split('-');
+  const MESES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  if(m1===m2)return`${parseInt(d1)} a ${parseInt(d2)} de ${MESES[parseInt(m1)-1]}`;
+  return`${parseInt(d1)} ${MESES[parseInt(m1)-1]} a ${parseInt(d2)} ${MESES[parseInt(m2)-1]}`;
+}
 function fmtDate(iso){try{return new Date(iso+'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'});}catch(e){return iso||'';}}
 function toast(msg,dur=3000){const el=document.getElementById('toast');if(!el)return;el.textContent=msg;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),dur);}
 function openModal(html){const b=document.getElementById('modal-body');if(b&&html)b.innerHTML=html;const m=document.querySelector('#gen-modal .modal');if(m)m.style.maxWidth='';document.getElementById('gen-modal').classList.add('show');}
@@ -1228,6 +1249,13 @@ function migrateState(d){
   }
   if(!d.op.faq||typeof d.op.faq!=='object')d.op.faq={};
   if(!d.op.completions||typeof d.op.completions!=='object')d.op.completions={};
+  // ADM — Planilha de Produção (itens cadastrados, lançamentos diários, contagens semanais)
+  if(!d.op.producaoItens||typeof d.op.producaoItens!=='object')d.op.producaoItens={};
+  if(!Array.isArray(d.op.producaoItens[OPLOJA]))d.op.producaoItens[OPLOJA]=[];
+  if(!d.op.producaoLancamentos||typeof d.op.producaoLancamentos!=='object')d.op.producaoLancamentos={};
+  if(!d.op.producaoLancamentos[OPLOJA]||typeof d.op.producaoLancamentos[OPLOJA]!=='object')d.op.producaoLancamentos[OPLOJA]={};
+  if(!d.op.producaoContagens||typeof d.op.producaoContagens!=='object')d.op.producaoContagens={};
+  if(!d.op.producaoContagens[OPLOJA]||typeof d.op.producaoContagens[OPLOJA]!=='object')d.op.producaoContagens[OPLOJA]={};
   // Limpeza leve: erros/manutenção resolvidos com mais de 90 dias
   const cut=new Date();cut.setDate(cut.getDate()-90);
   const p=n=>String(n).padStart(2,'0');
@@ -1317,8 +1345,7 @@ function _tryMigrateCompletions(){
 }
 function reRenderAll(){
   if(!me||!S)return;
-  try{buildSidebar();}catch(e){console.error(e);}
-  try{renderOperacional();}catch(e){console.error('reRenderAll:',e);}
+  try{renderMain();}catch(e){console.error(e);}
 }
 
 // ══════════════════════════════════════
@@ -1375,9 +1402,9 @@ function enterApp(k){
   const av=document.getElementById('sb-av');av.textContent=m.icon;av.style.background=m.color+'33';
   document.getElementById('sb-nm').textContent=m.name;
   document.getElementById('sb-rl').textContent=m.role;
-  try{buildSidebar();}catch(e){console.error('enterApp buildSidebar:',e);}
   window._opTab='hoje';window._opSetorTab='checklist';
-  renderOperacional();
+  window._appMode='operacional';window._admTab='producao';
+  try{renderMain();}catch(e){console.error('enterApp renderMain:',e);}
 }
 function doLogout(){
   me=null;
@@ -1392,7 +1419,42 @@ function closeSB(){document.getElementById('sidebar').classList.remove('open');d
 // SIDEBAR
 // ══════════════════════════════════════
 function buildSidebar(){
-  document.getElementById('sb-nav').innerHTML=buildOpSidebarHtml();
+  const sw=document.getElementById('sb-mode-switch');
+  if(sw)sw.innerHTML=buildModeSwitchHtml();
+  const mode=(M[me]?.tipo==='admin')?(window._appMode||'operacional'):'operacional';
+  document.getElementById('sb-nav').innerHTML=(mode==='adm')?buildAdmSidebarHtml():buildOpSidebarHtml();
+}
+function buildModeSwitchHtml(){
+  if(M[me]?.tipo!=='admin')return'';
+  const mode=window._appMode||'operacional';
+  return`<div style="display:flex;background:var(--panel2);border-radius:10px;padding:3px;margin-top:10px;gap:3px;">
+    <button onclick="setAppMode('operacional')" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:.72rem;font-weight:700;cursor:pointer;background:${mode==='operacional'?'var(--acc)':'transparent'};color:${mode==='operacional'?'#fff':'var(--muted)'};">Operacional</button>
+    <button onclick="setAppMode('adm')" style="flex:1;padding:7px 0;border:none;border-radius:8px;font-size:.72rem;font-weight:700;cursor:pointer;background:${mode==='adm'?'var(--acc)':'transparent'};color:${mode==='adm'?'#fff':'var(--muted)'};">ADM</button>
+  </div>`;
+}
+function setAppMode(mode){
+  if(mode==='adm'&&M[me]?.tipo!=='admin')return;
+  window._appMode=mode;
+  window._admTab='producao';
+  renderMain();
+}
+function renderMain(){
+  const mode=(M[me]?.tipo==='admin')?(window._appMode||'operacional'):'operacional';
+  const elOp=document.getElementById('p-operacional');
+  const elAdm=document.getElementById('p-adm');
+  const title=document.getElementById('tb-title');
+  buildSidebar();
+  if(mode==='adm'){
+    if(elOp)elOp.classList.remove('on');
+    if(elAdm)elAdm.classList.add('on');
+    if(title)title.textContent='ADM';
+    try{renderAdm();}catch(e){console.error('renderMain renderAdm:',e);}
+  }else{
+    if(elAdm)elAdm.classList.remove('on');
+    if(elOp)elOp.classList.add('on');
+    if(title)title.textContent='Operacional';
+    try{renderOperacional();}catch(e){console.error('renderMain renderOperacional:',e);}
+  }
 }
 function buildOpSidebarHtml(){
   const isSetorLider=M[me]?.tipo==='setorLider';
@@ -3017,6 +3079,175 @@ function opModalViewFoto(modeloId,data,itemId,fi){
     </div>
     <img src="${fotos[fi]}" style="width:100%;max-height:65vh;object-fit:contain;border-radius:10px;background:var(--panel2);">
   </div>`);
+}
+
+// ══════════════════════════════════════════════════════════════
+// ADM — painel administrativo (só Antonio/Victor, tipo:'admin')
+// ══════════════════════════════════════════════════════════════
+function buildAdmSidebarHtml(){
+  const tab=window._admTab||'producao';
+  const tabs=[{id:'producao',label:'Planilha de Produção',grp:'ADM'}];
+  let html='';let lastGrp='';
+  tabs.forEach(t=>{
+    if(t.grp!==lastGrp){html+=`<div class="nav-grp">${t.grp}</div>`;lastGrp=t.grp;}
+    const active=tab===t.id;
+    html+=`<button class="ni${active?' on':''}" onclick="window._admTab='${t.id}';renderAdm()">${t.label}</button>`;
+  });
+  return html;
+}
+function renderAdm(){
+  const el=document.getElementById('p-adm');if(!el)return;
+  if(M[me]?.tipo!=='admin'){el.innerHTML='<div class="card" style="padding:24px;">Acesso restrito.</div>';return;}
+  const tab=window._admTab||'producao';
+  const TAB_LABELS={producao:'Planilha de Produção'};
+  let content='';
+  if(tab==='producao')content=admTabProducao();
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;padding-bottom:16px;border-bottom:1px solid var(--line);">
+      <div>
+        <h2 style="margin:0;font-size:1.05rem;font-weight:700;">${TAB_LABELS[tab]||''}</h2>
+        <div style="margin-top:4px;"><span style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:99px;background:var(--acc)22;color:var(--acc);font-size:.74rem;font-weight:700;">ADM · Sr. Antonio</span></div>
+      </div>
+    </div>
+    <div id="adm-content">${content}</div>`;
+}
+
+// ── TAB: PLANILHA DE PRODUÇÃO ────────────────────────────────
+function admTabProducao(){
+  if(!S.op.producaoItens)S.op.producaoItens={};
+  if(!S.op.producaoItens[OPLOJA])S.op.producaoItens[OPLOJA]=[];
+  if(!S.op.producaoLancamentos)S.op.producaoLancamentos={};
+  if(!S.op.producaoLancamentos[OPLOJA])S.op.producaoLancamentos[OPLOJA]={};
+  if(!S.op.producaoContagens)S.op.producaoContagens={};
+  if(!S.op.producaoContagens[OPLOJA])S.op.producaoContagens[OPLOJA]={};
+
+  if(!window._admWeek)window._admWeek=admWeekKey(new Date());
+  const weekKey=window._admWeek;
+  const days=admWeekDays(weekKey);
+  const DIA_LABEL=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  const itens=(S.op.producaoItens[OPLOJA]||[]).filter(i=>i.ativo!==false);
+  const lanc=S.op.producaoLancamentos[OPLOJA]||{};
+  const contagens=S.op.producaoContagens[OPLOJA]?.[weekKey]||{};
+  const atualKey=admWeekKey(new Date());
+  const isCurrentWeek=weekKey===atualKey;
+  // Estoque inicial da semana = contagem física do domingo da semana ANTERIOR
+  // (o que sobrou vira o ponto de partida — não zera toda segunda-feira).
+  const[wy,wm,wd]=weekKey.split('-').map(Number);
+  const prevDate=new Date(wy,wm-1,wd);prevDate.setDate(prevDate.getDate()-7);
+  const prevWeekKey=admDateKey(prevDate);
+  const prevContagens=S.op.producaoContagens[OPLOJA]?.[prevWeekKey]||{};
+
+  const headerNav=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;">
+    <button class="btn-ghost btn-sm" onclick="admMudarSemana(-1)">← Semana anterior</button>
+    <div style="font-weight:700;font-size:.86rem;flex:1;text-align:center;min-width:160px;">${admFmtWeekLabel(weekKey)}${isCurrentWeek?' <span style="font-size:.68rem;font-weight:400;color:var(--acc);">(semana atual)</span>':''}</div>
+    <button class="btn-ghost btn-sm"${isCurrentWeek?' disabled style="opacity:.4;cursor:default;"':''} onclick="admMudarSemana(1)">Próxima semana →</button>
+  </div>`;
+
+  const itemManager=`<div class="card" style="padding:14px 16px;margin-bottom:18px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${itens.length?'10px':'0'};flex-wrap:wrap;gap:8px;">
+      <span style="font-weight:700;font-size:.84rem;">Itens controlados</span>
+      <button class="btn-gold btn-sm" onclick="admOpenNovoItem()">+ Novo item</button>
+    </div>
+    ${itens.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;">${itens.map(i=>`<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);font-size:.74rem;">${esc(i.nome)}${i.unidade?` <span style="color:var(--muted);">(${esc(i.unidade)})</span>`:''}<button onclick="admRemoverItem('${i.id}')" title="Remover" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.7rem;padding:0;margin-left:2px;">✕</button></span>`).join('')}</div>`
+      :`<div style="font-size:.76rem;color:var(--muted);">Nenhum item cadastrado ainda. Clique em "+ Novo item" para começar a controlar a produção.</div>`}
+  </div>`;
+
+  if(!itens.length)return headerNav+itemManager;
+
+  const rows=itens.map(item=>{
+    const dayCells=days.map(dk=>{
+      const val=lanc[dk]?.[item.id];
+      return`<td style="padding:4px;"><input type="number" min="0" step="1" value="${val!==undefined&&val!==null?val:''}" placeholder="0" onchange="admSetProducao('${dk}','${item.id}',this.value)" style="width:56px;padding:6px 4px;text-align:center;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--fg);font-size:.78rem;"></td>`;
+    }).join('');
+    const total=days.reduce((sum,dk)=>sum+(parseFloat(lanc[dk]?.[item.id])||0),0);
+    const inicialVal=prevContagens[item.id]?.contado;
+    const inicial=(inicialVal!==undefined&&inicialVal!==null&&inicialVal!=='')?parseFloat(inicialVal):0;
+    const saldoEsperado=inicial+total;
+    const contObj=contagens[item.id];
+    const contVal=contObj?.contado;
+    const temContagem=contVal!==undefined&&contVal!==null&&contVal!=='';
+    const diff=temContagem?(parseFloat(contVal)-saldoEsperado):null;
+    const diffColor=diff===null?'var(--muted)':diff===0?'#22c55e':'#ef4444';
+    const diffTxt=diff===null?'—':(diff>0?`+${diff}`:String(diff));
+    return`<tr>
+      <td style="padding:8px 10px;font-weight:600;font-size:.8rem;white-space:nowrap;">${esc(item.nome)}${item.unidade?` <span style="color:var(--muted);font-weight:400;font-size:.68rem;">${esc(item.unidade)}</span>`:''}</td>
+      <td style="padding:8px 10px;text-align:center;font-size:.78rem;color:var(--muted);">${inicial}</td>
+      ${dayCells}
+      <td style="padding:8px 10px;text-align:center;font-weight:700;font-size:.8rem;">${total}</td>
+      <td style="padding:8px 10px;text-align:center;font-weight:700;font-size:.8rem;">${saldoEsperado}</td>
+      <td style="padding:4px;"><input type="number" min="0" step="1" value="${temContagem?contVal:''}" placeholder="—" onchange="admSetContagem('${weekKey}','${item.id}',this.value)" style="width:64px;padding:6px 4px;text-align:center;border-radius:6px;border:1px solid var(--acc);background:var(--panel2);color:var(--fg);font-size:.78rem;font-weight:700;"></td>
+      <td style="padding:8px 10px;text-align:center;font-weight:800;font-size:.8rem;color:${diffColor};">${diffTxt}</td>
+    </tr>`;
+  }).join('');
+
+  const table=`<div class="card" style="padding:0;overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;min-width:900px;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--line);">
+          <th style="padding:8px 10px;text-align:left;font-size:.68rem;color:var(--muted);font-weight:700;">ITEM</th>
+          <th style="padding:8px 10px;font-size:.66rem;color:var(--muted);font-weight:700;">ESTOQUE<br>INICIAL</th>
+          ${DIA_LABEL.map((l,i)=>`<th style="padding:8px 4px;font-size:.66rem;color:var(--muted);font-weight:700;">${l}<br><span style="font-weight:400;opacity:.7;">${parseInt(days[i].split('-')[2])}</span></th>`).join('')}
+          <th style="padding:8px 10px;font-size:.68rem;color:var(--muted);font-weight:700;">PRODUZIDO<br>NA SEMANA</th>
+          <th style="padding:8px 10px;font-size:.68rem;color:var(--muted);font-weight:700;">SALDO<br>ESPERADO</th>
+          <th style="padding:8px 10px;font-size:.68rem;color:var(--acc);font-weight:700;">CONTAGEM<br>(DOM)</th>
+          <th style="padding:8px 10px;font-size:.68rem;color:var(--muted);font-weight:700;">DIFERENÇA</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>
+  <div style="font-size:.7rem;color:var(--muted);margin-top:10px;line-height:1.6;">O estoque inicial da semana é a contagem do domingo anterior — não zera toda segunda. Saldo esperado = estoque inicial + produzido na semana. No domingo, conte fisicamente e digite em "Contagem": <span style="color:#ef4444;font-weight:700;">vermelho</span> = não bateu (sobrou ou faltou), <span style="color:#22c55e;font-weight:700;">verde</span> = bateu certinho.</div>`;
+
+  return headerNav+itemManager+table;
+}
+function admMudarSemana(delta){
+  const cur=window._admWeek||admWeekKey(new Date());
+  const[y,m,d]=cur.split('-').map(Number);
+  const dt=new Date(y,m-1,d);
+  dt.setDate(dt.getDate()+delta*7);
+  const novo=admWeekKey(dt);
+  const atual=admWeekKey(new Date());
+  if(novo>atual)return;
+  window._admWeek=novo;
+  renderAdm();
+}
+function admOpenNovoItem(){
+  openModal(`<h3 style="margin-bottom:16px;">Novo item de produção</h3>
+    <div class="f-grp"><label class="f-lb">Nome *</label><input class="f-in" id="admi-nome" placeholder="Ex: Bolinho de carne"></div>
+    <div class="f-grp"><label class="f-lb">Unidade (opcional)</label><input class="f-in" id="admi-unidade" placeholder="Ex: un, kg, porções"></div>
+    <div id="admi-err" style="font-size:.74rem;color:var(--red);min-height:14px;"></div>
+    <button class="btn-gold" style="width:100%;margin-top:12px;" onclick="admSalvarNovoItem()">Salvar</button>`);
+}
+function admSalvarNovoItem(){
+  const nome=document.getElementById('admi-nome').value.trim();
+  if(!nome){document.getElementById('admi-err').textContent='Nome obrigatório.';return;}
+  const unidade=document.getElementById('admi-unidade').value.trim();
+  if(!S.op.producaoItens[OPLOJA])S.op.producaoItens[OPLOJA]=[];
+  S.op.producaoItens[OPLOJA].push({id:uid(),nome,unidade,ativo:true});
+  saveLocal();closeModal();renderAdm();toast('Item adicionado!');
+}
+function admRemoverItem(itemId){
+  if(!confirm('Remover este item da planilha de produção? O histórico de lançamentos dele é mantido, mas ele deixa de aparecer na grade.'))return;
+  const arr=S.op.producaoItens[OPLOJA]||[];
+  const it=arr.find(i=>i.id===itemId);
+  if(it)it.ativo=false;
+  saveLocal();renderAdm();toast('Item removido.');
+}
+function admSetProducao(dateKey,itemId,valor){
+  if(!S.op.producaoLancamentos[OPLOJA])S.op.producaoLancamentos[OPLOJA]={};
+  if(!S.op.producaoLancamentos[OPLOJA][dateKey])S.op.producaoLancamentos[OPLOJA][dateKey]={};
+  if(valor===''||valor===null||valor===undefined){delete S.op.producaoLancamentos[OPLOJA][dateKey][itemId];}
+  else{S.op.producaoLancamentos[OPLOJA][dateKey][itemId]=parseFloat(valor)||0;}
+  saveLocal();
+  renderAdm();
+}
+function admSetContagem(weekKey,itemId,valor){
+  if(!S.op.producaoContagens[OPLOJA])S.op.producaoContagens[OPLOJA]={};
+  if(!S.op.producaoContagens[OPLOJA][weekKey])S.op.producaoContagens[OPLOJA][weekKey]={};
+  if(valor===''||valor===null||valor===undefined){delete S.op.producaoContagens[OPLOJA][weekKey][itemId];}
+  else{S.op.producaoContagens[OPLOJA][weekKey][itemId]={contado:parseFloat(valor)||0,registradoEm:new Date().toISOString(),registradoPor:me};}
+  saveLocal();
+  renderAdm();
 }
 
 // ══════════════════════════════════════
