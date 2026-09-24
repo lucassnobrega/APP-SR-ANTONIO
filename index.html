@@ -1005,6 +1005,7 @@ const M={
   salao:{name:'Líder Salão',role:'Líder de Setor · Salão',color:'#60a5fa',icon:'SL',isLeader:false,tipo:'setorLider',loja:OPLOJA,setor:'Salão'},
   bar:{name:'Líder Bar',role:'Líder de Setor · Bar',color:'#a78bfa',icon:'BR',isLeader:false,tipo:'setorLider',loja:OPLOJA,setor:'Bar'},
   caixa:{name:'Líder Caixa',role:'Líder de Setor · Caixa',color:'#22c55e',icon:'CX',isLeader:false,tipo:'setorLider',loja:OPLOJA,setor:'Caixa'},
+  estoquista:{name:'Estoquista',role:'Líder de Setor · Estoque',color:'#0ea5e9',icon:'ES',isLeader:false,tipo:'setorLider',loja:OPLOJA,setor:'Estoque'},
 };
 function opCanEdit(){return M[me]?.isLeader===true;}
 
@@ -1256,6 +1257,11 @@ function migrateState(d){
   if(!d.op.producaoLancamentos[OPLOJA]||typeof d.op.producaoLancamentos[OPLOJA]!=='object')d.op.producaoLancamentos[OPLOJA]={};
   if(!d.op.producaoContagens||typeof d.op.producaoContagens!=='object')d.op.producaoContagens={};
   if(!d.op.producaoContagens[OPLOJA]||typeof d.op.producaoContagens[OPLOJA]!=='object')d.op.producaoContagens[OPLOJA]={};
+  // Pedidos/notas (dono sobe, estoquista confere) e Registro diário de Produção (foto + retirado/produzido)
+  if(!d.op.pedidos||typeof d.op.pedidos!=='object')d.op.pedidos={};
+  if(!Array.isArray(d.op.pedidos[OPLOJA]))d.op.pedidos[OPLOJA]=[];
+  if(!d.op.producaoRegistros||typeof d.op.producaoRegistros!=='object')d.op.producaoRegistros={};
+  if(!d.op.producaoRegistros[OPLOJA]||typeof d.op.producaoRegistros[OPLOJA]!=='object')d.op.producaoRegistros[OPLOJA]={};
   // Limpeza leve: erros/manutenção resolvidos com mais de 90 dias
   const cut=new Date();cut.setDate(cut.getDate()-90);
   const p=n=>String(n).padStart(2,'0');
@@ -1465,7 +1471,10 @@ function buildOpSidebarHtml(){
       <div style="padding:2px 12px 10px;font-size:.64rem;color:var(--muted);">Sr. Antonio</div>
       <button class="ni${setorTab==='checklist'?' on':''}" onclick="window._opSetorTab='checklist';renderOperacional()">Checklist</button>
       <button class="ni${setorTab==='processos'?' on':''}" onclick="window._opSetorTab='processos';renderOperacional()">Processos</button>
-      <button class="ni${setorTab==='sugestoes'?' on':''}" onclick="window._opSetorTab='sugestoes';renderOperacional()">Sugestões</button>`;
+      <button class="ni${setorTab==='sugestoes'?' on':''}" onclick="window._opSetorTab='sugestoes';renderOperacional()">Sugestões</button>
+      ${M[me].setor==='Estoque'?`
+      <button class="ni${setorTab==='pedidos'?' on':''}" onclick="window._opSetorTab='pedidos';renderOperacional()">Pedidos</button>
+      <button class="ni${setorTab==='producaoRegistro'?' on':''}" onclick="window._opSetorTab='producaoRegistro';renderOperacional()">Registro de Produção</button>`:''}`;
   }
   const tab=window._opTab||'hoje';
   const hoje=serviceKey();
@@ -1483,6 +1492,7 @@ function buildOpSidebarHtml(){
     manutencao:(S.op?.manutencao||[]).filter(m=>m.status!=='concluido').length||0,
     checklists:clBadge,
     executar:clBadge,
+    pedidos:(S.op?.pedidos?.[OPLOJA]||[]).filter(p=>!p.validacao).length||0,
   };
   const tabs=[
     {id:'hoje',label:'Hoje',grp:'Visão'},
@@ -1490,6 +1500,8 @@ function buildOpSidebarHtml(){
     {id:'tarefas',label:'Tarefas',grp:'Visão'},
     {id:'erros',label:'Ocorrências',grp:'Visão'},
     {id:'manutencao',label:'Manutenção',grp:'Visão'},
+    {id:'pedidos',label:'Pedidos',grp:'Visão'},
+    {id:'producaoRegistro',label:'Registro de Produção',grp:'Visão'},
     {id:'checklists',label:'Checklists',grp:'Sr. Antonio'},
     {id:'faq',label:'FAQ / POPs',grp:'Sr. Antonio'},
     {id:'funcionarios',label:'Funcionários',grp:'Sr. Antonio'},
@@ -1519,7 +1531,7 @@ function renderOpStore(el){
   buildSidebar();
   const loja=opGetLoja();
   const tab=window._opTab||'hoje';
-  const TAB_LABELS={hoje:'Hoje',executar:'Executar Checklists',tarefas:'Tarefas',erros:'Ocorrências',manutencao:'Manutenção',checklists:'Checklists',faq:'FAQ / POPs',funcionarios:'Funcionários',marketing:'Marketing'};
+  const TAB_LABELS={hoje:'Hoje',executar:'Executar Checklists',tarefas:'Tarefas',erros:'Ocorrências',manutencao:'Manutenção',pedidos:'Pedidos',producaoRegistro:'Registro de Produção',checklists:'Checklists',faq:'FAQ / POPs',funcionarios:'Funcionários',marketing:'Marketing'};
   let content='';
   if(tab==='hoje')content=opTabHoje();
   else if(tab==='executar')content=opTabExecutar();
@@ -1527,6 +1539,8 @@ function renderOpStore(el){
   else if(tab==='checklists')content=opTabChecklists();
   else if(tab==='faq')content=opTabFAQ();
   else if(tab==='manutencao')content=opTabManutencao();
+  else if(tab==='pedidos')content=opTabPedidos();
+  else if(tab==='producaoRegistro')content=opTabProducaoRegistro();
   else if(tab==='funcionarios')content=opTabFuncionarios();
   else if(tab==='marketing')content=opTabMarketing();
   else if(tab==='erros')content=opTabErros();
@@ -1633,6 +1647,10 @@ function renderOpSetorLider(el){
       </div>
       ${!temFAQ?`<div style="font-size:.72rem;color:var(--muted);margin-top:14px;text-align:center;">O gerente adicionará os procedimentos em breve.</div>`:''}
     </div>`
+    :setorTab==='pedidos'
+    ?opTabPedidos()
+    :setorTab==='producaoRegistro'
+    ?opTabProducaoRegistro()
     :`<div style="margin-bottom:28px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <span style="font-weight:700;font-size:.88rem;">Sugestões / Erros</span>
@@ -1866,6 +1884,293 @@ function opSaveTarefa(){
   if(!S.op.tarefas)S.op.tarefas=[];
   S.op.tarefas.push({id:uid(),titulo,desc:document.getElementById('opt-desc').value.trim(),setor:document.getElementById('opt-setor').value,status:'todo',date:todayKey(),createdBy:me});
   saveLocal();closeModal();renderOperacional();toast('Tarefa criada!');
+}
+
+// ── Compressão de foto genérica (Pedidos / Registro de Produção) ──
+// Igual à usada nos itens de checklist, mas com resolução um pouco maior (640px)
+// porque aqui a foto costuma ser de um texto (nota, planilha) que precisa ficar legível.
+function _comprimirFoto(file,onDone,onErro){
+  const MAX=640;
+  const _processar=(bmp)=>{
+    try{
+      const scale=Math.min(1,MAX/Math.max(bmp.width||MAX,bmp.height||1));
+      const w=Math.round((bmp.width||MAX)*scale)||MAX;
+      const h=Math.round((bmp.height||1)*scale)||1;
+      const canvas=document.createElement('canvas');
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(bmp,0,0,w,h);
+      if(typeof bmp.close==='function')bmp.close();
+      const compressed=canvas.toDataURL('image/jpeg',0.6);
+      canvas.width=1;canvas.height=1;
+      onDone(compressed);
+    }catch(err){
+      if(typeof bmp?.close==='function')bmp.close();
+      console.error('_comprimirFoto _processar:',err);
+      if(onErro)onErro(err);
+    }
+  };
+  const _fallback=()=>{
+    const r=new FileReader();
+    r.onerror=()=>{if(onErro)onErro(new Error('FileReader error'));};
+    r.onload=ev=>{
+      setTimeout(()=>{
+        const img=new Image();
+        img.onerror=()=>{if(onErro)onErro(new Error('Image load error'));};
+        img.onload=()=>_processar(img);
+        img.src=ev.target.result;
+      },80);
+    };
+    r.readAsDataURL(file);
+  };
+  if(typeof createImageBitmap==='function'){
+    createImageBitmap(file).then(_processar).catch(_fallback);
+  }else{
+    _fallback();
+  }
+}
+
+// ── TAB: PEDIDOS (dono sobe nota/pedido, estoquista confere) ──
+function opTabPedidos(){
+  if(!S.op.pedidos)S.op.pedidos={};
+  if(!S.op.pedidos[OPLOJA])S.op.pedidos[OPLOJA]=[];
+  const pedidos=S.op.pedidos[OPLOJA].slice().sort((a,b)=>(b.criadoEm||'').localeCompare(a.criadoEm||''));
+  const novoBtn=`<button class="btn-gold btn-sm" onclick="opAbrirNovoPedido()">+ Novo pedido</button>`;
+  const cards=pedidos.length?pedidos.map(p=>{
+    const val=p.validacao;
+    const statusBadge=!val
+      ?`<span style="font-size:.68rem;padding:2px 9px;border-radius:999px;background:#f59e0b22;color:#f59e0b;font-weight:700;">Aguardando conferência</span>`
+      :val.ok
+        ?`<span style="font-size:.68rem;padding:2px 9px;border-radius:999px;background:#22c55e22;color:#22c55e;font-weight:700;">Chegou tudo certo</span>`
+        :`<span style="font-size:.68rem;padding:2px 9px;border-radius:999px;background:#ef444422;color:#ef4444;font-weight:700;">Faltou / veio errado</span>`;
+    return`<div class="card" style="padding:14px 16px;margin-bottom:10px;">
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        ${p.foto?`<img src="${p.foto}" onclick="opVerFotoPedido('${p.id}')" style="width:60px;height:60px;object-fit:cover;border-radius:8px;cursor:pointer;flex-shrink:0;">`:''}
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:.86rem;">${esc(p.descricao||'Pedido')}</div>
+          <div style="font-size:.7rem;color:var(--muted);margin-top:2px;">${p.criadoEm?fmtDate(p.criadoEm.slice(0,10)):''} · lançado por ${esc(M[p.criadoPor]?.name||p.criadoPor||'')}</div>
+          <div style="margin-top:6px;">${statusBadge}</div>
+          ${val&&!val.ok&&val.obs?`<div style="font-size:.76rem;margin-top:4px;color:#ef4444;">${esc(val.obs)}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0;">
+          <button class="btn-ghost btn-sm" onclick="opAbrirValidarPedido('${p.id}')">${val?'Editar':'Conferir'}</button>
+          <button onclick="opExcluirPedido('${p.id}')" title="Excluir pedido" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.72rem;padding:2px 4px;">✕ Excluir</button>
+        </div>
+      </div>
+    </div>`;
+  }).join(''):'<div class="empty-state">Nenhum pedido lançado ainda.</div>';
+  return`<div style="display:flex;justify-content:flex-end;margin-bottom:14px;">${novoBtn}</div>${cards}`;
+}
+function opVerFotoPedido(pedidoId){
+  const p=(S.op.pedidos?.[OPLOJA]||[]).find(x=>x.id===pedidoId);
+  if(!p?.foto)return;
+  openModal(`<div style="padding:16px 20px;max-width:min(90vw,640px);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <span style="font-weight:700;font-size:.9rem;">Foto do pedido</span>
+      <button class="btn-ghost btn-sm" onclick="closeModal()">Fechar ✕</button>
+    </div>
+    <img src="${p.foto}" style="width:100%;max-height:65vh;object-fit:contain;border-radius:10px;background:var(--panel2);">
+  </div>`);
+}
+function opAbrirNovoPedido(){
+  window._pedFotoTmp=null;
+  openModal(`<h3 style="margin-bottom:16px;">Novo Pedido / Nota</h3>
+    <div class="f-grp"><label class="f-lb">Descrição</label><input class="f-in" id="ped-desc" placeholder="Ex: Pedido supermercado, fornecedor tal..."></div>
+    <div class="f-grp"><label class="f-lb">Foto do pedido / nota</label>
+      <div id="ped-foto-preview" style="margin-bottom:8px;"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <label class="btn-ghost btn-sm" style="cursor:pointer;">📷 Câmera<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="opPedidoAttachFoto(this)"></label>
+        <label class="btn-ghost btn-sm" style="cursor:pointer;">🖼️ Galeria / Print<input type="file" accept="image/*" style="display:none;" onchange="opPedidoAttachFoto(this)"></label>
+      </div>
+    </div>
+    <div id="ped-err" style="font-size:.74rem;color:var(--red);min-height:14px;"></div>
+    <button class="btn-gold" style="width:100%;margin-top:12px;" onclick="opSalvarNovoPedido()">Salvar Pedido</button>`);
+}
+function opPedidoAttachFoto(input){
+  if(!input.files||!input.files[0])return;
+  const file=input.files[0];
+  input.disabled=true;
+  toast('📷 Processando foto...',6000);
+  _comprimirFoto(file,(compressed)=>{
+    window._pedFotoTmp=compressed;
+    const prev=document.getElementById('ped-foto-preview');
+    if(prev)prev.innerHTML=`<img src="${compressed}" style="width:100px;height:100px;object-fit:cover;border-radius:8px;border:2px solid var(--acc);">`;
+    input.disabled=false;
+    try{input.value='';}catch(_){}
+    toast('✅ Foto anexada!');
+  },()=>{toast('⚠️ Erro ao processar foto.',5000);input.disabled=false;});
+}
+function opSalvarNovoPedido(){
+  const desc=document.getElementById('ped-desc').value.trim();
+  if(!desc&&!window._pedFotoTmp){document.getElementById('ped-err').textContent='Adicione uma descrição ou uma foto.';return;}
+  if(!S.op.pedidos)S.op.pedidos={};
+  if(!S.op.pedidos[OPLOJA])S.op.pedidos[OPLOJA]=[];
+  S.op.pedidos[OPLOJA].push({id:uid(),descricao:desc,foto:window._pedFotoTmp||null,criadoPor:me,criadoEm:new Date().toISOString(),validacao:null});
+  saveLocal();closeModal();window._pedFotoTmp=null;
+  renderOperacional();
+  toast('Pedido lançado!');
+}
+function opAbrirValidarPedido(pedidoId){
+  const p=(S.op.pedidos?.[OPLOJA]||[]).find(x=>x.id===pedidoId);
+  if(!p)return;
+  const val=p.validacao;
+  window._pedValTmp=val?val.ok:undefined;
+  openModal(`<h3 style="margin-bottom:4px;">Conferir Pedido</h3>
+    <div style="font-size:.76rem;color:var(--muted);margin-bottom:16px;">${esc(p.descricao||'Pedido')}</div>
+    ${p.foto?`<img src="${p.foto}" style="width:100%;max-height:220px;object-fit:contain;border-radius:10px;background:var(--panel2);margin-bottom:14px;">`:''}
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button id="pedv-ok-btn" class="btn-gold" style="flex:1;${val?.ok===true?'background:#22c55e;':''}" onclick="opSetValidacaoPedido(true)">✓ Chegou tudo certo</button>
+      <button id="pedv-nok-btn" class="btn-ghost" style="flex:1;${val?.ok===false?'border-color:#ef4444;color:#ef4444;':''}" onclick="opSetValidacaoPedido(false)">Faltou algo</button>
+    </div>
+    <div class="f-grp"><label class="f-lb">O que faltou / veio errado (se houver)</label>
+      <textarea class="f-in" id="pedv-obs" rows="3" placeholder="Descreva o que não veio ou veio errado...">${esc(val?.obs||'')}</textarea>
+    </div>
+    <div id="pedv-err" style="font-size:.74rem;color:var(--red);min-height:14px;"></div>
+    <button class="btn-gold" style="width:100%;margin-top:8px;" onclick="opSalvarValidacaoPedido('${p.id}')">Salvar Conferência</button>`);
+}
+function opSetValidacaoPedido(ok){
+  window._pedValTmp=ok;
+  const okBtn=document.getElementById('pedv-ok-btn'),nokBtn=document.getElementById('pedv-nok-btn');
+  if(okBtn)okBtn.style.background=ok?'#22c55e':'';
+  if(nokBtn){nokBtn.style.borderColor=!ok?'#ef4444':'';nokBtn.style.color=!ok?'#ef4444':'';}
+}
+function opSalvarValidacaoPedido(pedidoId){
+  const p=(S.op.pedidos?.[OPLOJA]||[]).find(x=>x.id===pedidoId);
+  if(!p)return;
+  if(window._pedValTmp===undefined||window._pedValTmp===null){document.getElementById('pedv-err').textContent='Marque se chegou certo ou faltou algo.';return;}
+  const obs=document.getElementById('pedv-obs').value.trim();
+  p.validacao={ok:window._pedValTmp,obs,validadoPor:me,validadoEm:new Date().toISOString()};
+  saveLocal();closeModal();window._pedValTmp=null;
+  renderOperacional();
+  toast('Conferência salva!');
+}
+function opExcluirPedido(pedidoId){
+  if(!confirm('Excluir este pedido? Essa ação não pode ser desfeita.'))return;
+  S.op.pedidos[OPLOJA]=(S.op.pedidos?.[OPLOJA]||[]).filter(p=>p.id!==pedidoId);
+  saveLocal();renderOperacional();toast('Pedido excluído.');
+}
+
+// ── TAB: REGISTRO DE PRODUÇÃO (foto + retirado/produzido) ────
+function opTabProducaoRegistro(){
+  if(!S.op.producaoRegistros)S.op.producaoRegistros={};
+  if(!S.op.producaoRegistros[OPLOJA])S.op.producaoRegistros[OPLOJA]={};
+  const regsPorDia=S.op.producaoRegistros[OPLOJA];
+  const dias=Object.keys(regsPorDia).sort((a,b)=>b.localeCompare(a)).slice(0,14);
+  const novoBtn=`<button class="btn-gold btn-sm" onclick="opAbrirNovoRegistroProducao()">+ Novo registro</button>`;
+  if(!dias.length)return`<div style="display:flex;justify-content:flex-end;margin-bottom:14px;">${novoBtn}</div><div class="empty-state">Nenhum registro de produção ainda.</div>`;
+  const blocos=dias.map(dk=>{
+    const regs=regsPorDia[dk]||[];
+    const cards=regs.map(r=>`<div class="card" style="padding:12px 14px;margin-bottom:8px;">
+      <div style="display:flex;gap:10px;">
+        ${r.foto?`<img src="${r.foto}" onclick="opVerFotoRegistro('${dk}','${r.id}')" style="width:56px;height:56px;object-fit:cover;border-radius:8px;cursor:pointer;flex-shrink:0;">`:''}
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:.7rem;color:var(--muted);margin-bottom:4px;">${r.registradoEm?r.registradoEm.slice(11,16):''} · ${esc(M[r.registradoPor]?.name||r.registradoPor||'')}</div>
+          ${(r.retiradas||[]).length?`<div style="font-size:.78rem;margin-bottom:2px;"><b>Retirado:</b> ${r.retiradas.map(i=>`${esc(i.item)} (${esc(String(i.qtd))}${i.unidade?' '+esc(i.unidade):''})`).join(', ')}</div>`:''}
+          ${(r.produzidas||[]).length?`<div style="font-size:.78rem;"><b>Produzido:</b> ${r.produzidas.map(i=>`${esc(i.item)} (${esc(String(i.qtd))}${i.unidade?' '+esc(i.unidade):''})`).join(', ')}</div>`:''}
+        </div>
+        <button onclick="opExcluirRegistroProducao('${dk}','${r.id}')" title="Excluir registro" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.75rem;padding:2px 4px;flex-shrink:0;">✕</button>
+      </div>
+    </div>`).join('');
+    return`<div style="margin-bottom:18px;">
+      <div style="font-weight:700;font-size:.82rem;margin-bottom:8px;">${fmtDate(dk)}</div>
+      ${cards}
+    </div>`;
+  }).join('');
+  return`<div style="display:flex;justify-content:flex-end;margin-bottom:14px;">${novoBtn}</div>${blocos}`;
+}
+function opVerFotoRegistro(dateKey,regId){
+  const r=(S.op.producaoRegistros?.[OPLOJA]?.[dateKey]||[]).find(x=>x.id===regId);
+  if(!r?.foto)return;
+  openModal(`<div style="padding:16px 20px;max-width:min(90vw,640px);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <span style="font-weight:700;font-size:.9rem;">Foto da planilha</span>
+      <button class="btn-ghost btn-sm" onclick="closeModal()">Fechar ✕</button>
+    </div>
+    <img src="${r.foto}" style="width:100%;max-height:65vh;object-fit:contain;border-radius:10px;background:var(--panel2);">
+  </div>`);
+}
+function opAbrirNovoRegistroProducao(){
+  window._prodRegTmp={foto:null,retiradas:[{item:'',qtd:'',unidade:''}],produzidas:[{item:'',qtd:'',unidade:''}]};
+  openModal(_renderRegistroProducaoModal());
+}
+function _renderRegistroProducaoModal(){
+  const t=window._prodRegTmp;
+  const listaHtml=(lista,tipo)=>lista.map((it,idx)=>`
+    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
+      <input class="f-in" placeholder="Item (ex: Frango)" value="${esc(it.item)}" oninput="opRegProdSet('${tipo}',${idx},'item',this.value)" style="flex:2;font-size:.8rem;padding:6px 8px;">
+      <input class="f-in" type="number" min="0" placeholder="Qtd" value="${esc(String(it.qtd||''))}" oninput="opRegProdSet('${tipo}',${idx},'qtd',this.value)" style="flex:1;font-size:.8rem;padding:6px 8px;">
+      <input class="f-in" placeholder="Unid. (kg, porções...)" value="${esc(it.unidade||'')}" oninput="opRegProdSet('${tipo}',${idx},'unidade',this.value)" style="flex:1.4;font-size:.8rem;padding:6px 8px;">
+      <button onclick="opRegProdRemover('${tipo}',${idx})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.85rem;flex-shrink:0;">✕</button>
+    </div>`).join('');
+  return`<h3 style="margin-bottom:4px;">Registro de Produção</h3>
+    <div style="font-size:.72rem;color:var(--muted);margin-bottom:16px;">${new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})}</div>
+    <div class="f-grp"><label class="f-lb">Foto da planilha</label>
+      <div id="preg-foto-preview" style="margin-bottom:8px;">${t.foto?`<img src="${t.foto}" style="width:100px;height:100px;object-fit:cover;border-radius:8px;border:2px solid var(--acc);">`:''}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <label class="btn-ghost btn-sm" style="cursor:pointer;">📷 Câmera<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="opRegProdAttachFoto(this)"></label>
+        <label class="btn-ghost btn-sm" style="cursor:pointer;">🖼️ Galeria / Print<input type="file" accept="image/*" style="display:none;" onchange="opRegProdAttachFoto(this)"></label>
+      </div>
+    </div>
+    <div class="f-grp"><label class="f-lb">O que foi retirado do estoque</label>
+      <div id="preg-retiradas">${listaHtml(t.retiradas,'retiradas')}</div>
+      <button class="btn-ghost btn-sm" onclick="opRegProdAdd('retiradas')">+ Adicionar item</button>
+    </div>
+    <div class="f-grp"><label class="f-lb">O que foi produzido</label>
+      <div id="preg-produzidas">${listaHtml(t.produzidas,'produzidas')}</div>
+      <button class="btn-ghost btn-sm" onclick="opRegProdAdd('produzidas')">+ Adicionar item</button>
+    </div>
+    <div id="preg-err" style="font-size:.74rem;color:var(--red);min-height:14px;"></div>
+    <button class="btn-gold" style="width:100%;margin-top:8px;" onclick="opSalvarRegistroProducao()">Salvar Registro</button>`;
+}
+function _reabrirModalRegistroProducao(){
+  const b=document.getElementById('modal-body');
+  if(b)b.innerHTML=_renderRegistroProducaoModal();
+}
+function opRegProdAdd(tipo){
+  window._prodRegTmp[tipo].push({item:'',qtd:'',unidade:''});
+  _reabrirModalRegistroProducao();
+}
+function opRegProdRemover(tipo,idx){
+  window._prodRegTmp[tipo].splice(idx,1);
+  _reabrirModalRegistroProducao();
+}
+function opRegProdSet(tipo,idx,campo,valor){
+  if(!window._prodRegTmp[tipo][idx])return;
+  window._prodRegTmp[tipo][idx][campo]=valor;
+}
+function opRegProdAttachFoto(input){
+  if(!input.files||!input.files[0])return;
+  const file=input.files[0];
+  input.disabled=true;
+  toast('📷 Processando foto...',6000);
+  _comprimirFoto(file,(compressed)=>{
+    window._prodRegTmp.foto=compressed;
+    input.disabled=false;
+    try{input.value='';}catch(_){}
+    _reabrirModalRegistroProducao();
+    toast('✅ Foto anexada!');
+  },()=>{toast('⚠️ Erro ao processar foto.',5000);input.disabled=false;});
+}
+function opSalvarRegistroProducao(){
+  const t=window._prodRegTmp;
+  const retiradas=(t.retiradas||[]).filter(i=>i.item&&i.item.trim());
+  const produzidas=(t.produzidas||[]).filter(i=>i.item&&i.item.trim());
+  if(!t.foto&&!retiradas.length&&!produzidas.length){document.getElementById('preg-err').textContent='Adicione ao menos uma foto ou um item.';return;}
+  const hoje=todayKey();
+  if(!S.op.producaoRegistros)S.op.producaoRegistros={};
+  if(!S.op.producaoRegistros[OPLOJA])S.op.producaoRegistros[OPLOJA]={};
+  if(!S.op.producaoRegistros[OPLOJA][hoje])S.op.producaoRegistros[OPLOJA][hoje]=[];
+  S.op.producaoRegistros[OPLOJA][hoje].push({id:uid(),foto:t.foto||null,retiradas,produzidas,registradoPor:me,registradoEm:new Date().toISOString()});
+  saveLocal();closeModal();window._prodRegTmp=null;
+  renderOperacional();
+  toast('Registro salvo!');
+}
+function opExcluirRegistroProducao(dateKey,regId){
+  if(!confirm('Excluir este registro? Essa ação não pode ser desfeita.'))return;
+  if(S.op.producaoRegistros?.[OPLOJA]?.[dateKey]){
+    S.op.producaoRegistros[OPLOJA][dateKey]=S.op.producaoRegistros[OPLOJA][dateKey].filter(r=>r.id!==regId);
+    if(!S.op.producaoRegistros[OPLOJA][dateKey].length)delete S.op.producaoRegistros[OPLOJA][dateKey];
+  }
+  saveLocal();renderOperacional();toast('Registro excluído.');
 }
 
 // ── TAB: MANUTENÇÃO ──────────────────────────────────────────
